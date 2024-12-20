@@ -18,7 +18,7 @@ torchvision = 0.11.2+cu113
 ```
 # Results
 All the results presented here are referenced from the original paper.
-| Dataset | OA (%) | AA (%) | Kappa (%) |
+| Dataset | OA (%) | AA (%) | Kappa (×100) |
 | :----: |:------:|:------:|:---------:|
 | Indian Pines  | 99.31  | 99.09  |   99.21   |
 | Pavia University  | 99.56  | 99.31  |   99.41   |
