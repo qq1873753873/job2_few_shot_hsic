@@ -1,4 +1,4 @@
-# A Greedy Strategy Guided Graph Self-Attention Network for Few-Shot Hyperspectral Image Classification
+# IEEE_TGRS_GS-GraphSAT
 Abstract— For hyperspectral image classification (HSIC), labeling samples is challenging and expensive due to high dimensionality and massive data, which limits the accuracy and stability of classification. 
 To alleviate this problem, a greedy strategy guided graph self-attention network (GS-GraphSAT) is proposed. 
 First, a graph self-attention (GSA) mechanism is designed by combining a multihead self-attention (MHSA) mechanism with the graph attention network (GAT), which can simultaneously consider the direct and indirect relationships between nodes and deeply analyze the intrinsic characteristics of nodes. 
