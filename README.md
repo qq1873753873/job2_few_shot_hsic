@@ -16,6 +16,9 @@ torch = 1.10.1+cu113
 torchaudio = 0.10.1+cu113
 torchvision = 0.11.2+cu113
 ```
+# How to use it?
+Here an example experiment is given by using **Indian Pines**. Directly run **Main_IP.py** to produce the results. Please note that due to the randomness of the parameter initialization, the experimental results might have slightly different from those reported in the paper.
+
 # Results
 All the results presented here are referenced from the original paper.
 | Dataset | OA (%) | AA (%) | Kappa (×100) |
@@ -27,6 +30,12 @@ All the results presented here are referenced from the original paper.
 
 # Citation
 If you find this work interesting in your research, please kindly cite:
+
+```
+[1] F. Zhu, C. Shi, L. Wang and K. Shi, "A Greedy Strategy Guided Graph Self-Attention Network for Few-Shot Hyperspectral Image Classification,"
+    in IEEE Transactions on Geoscience and Remote Sensing, vol. 62, pp. 1-20, 2024, Art no. 5539620, doi: 10.1109/TGRS.2024.3505539.
+```
+
 ```
 @ARTICLE{10766621,
   author={Zhu, Fei and Shi, Cuiping and Wang, Liguo and Shi, Kaijie},
