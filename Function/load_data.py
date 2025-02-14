@@ -13,5 +13,11 @@ def load_dataset(Dataset):
         gt_uPavia = sio.loadmat('Data/PaviaU_gt.mat')
         data_hsi = uPavia['paviaU']
         gt_hsi = gt_uPavia['paviaU_gt']
+    
+    if Dataset == 'SA':
+        data_mat = sio.loadmat('Data/Salinas_corrected.mat')
+        data_hsi = data_mat['salinas_corrected']
+        gt_mat = sio.loadmat('Data/Salinas_gt.mat')
+        gt_hsi = gt_mat['salinas_gt']
 
     return data_hsi, gt_hsi

@@ -1,3 +1,4 @@
+import os
 import time
 import torch
 import random
@@ -9,22 +10,23 @@ from sklearn import metrics
 from sklearn import preprocessing
 from Function import load_data, generate, LDA_SLIC, GreedyTrainingStrategy
 from Network import GS_GraphSAT
+import spectral as spy
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-samples_type = ['ratio', 'same_num'][0]
+samples_type = ['ratio', 'same_num'][1]#修改训练比例和shot数量
 
 dataset = 'IP'
 Dataset = dataset.upper()
 data, gt = load_data.load_dataset(Dataset)
 
-# Seed_List = [1, 2, 3, 4, 5]
-Seed_List = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+Seed_List = [1, 2, 3, 4, 5]
+#Seed_List = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 gt_hsi = gt.reshape(np.prod(gt.shape[:2]),)
 class_count = max(gt_hsi)
 print('The class numbers of the HSI data is:', class_count)
 
 print('-----Importing Setting Parameters----')
-learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.001, 500, 0.03, 0.07, 100  # ip
+learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.001, 500, 0.005, 0.005, 100  # ip
 # learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.001, 500, 0.05, 0.05, 100  # ip  5%
 
 dataset_name = Dataset
@@ -37,7 +39,7 @@ Train_Time_ALL = []
 Test_Time_ALL = []
 
 superpixel_scale = Scale
-train_samples_per_class = curr_train_ratio
+train_samples_per_class = 3
 val_samples = class_count
 train_ratio = curr_train_ratio
 cmap = plt.get_cmap('jet', class_count + 1)
@@ -51,6 +53,51 @@ data = np.reshape(data, [height * width, bands])
 minMax = preprocessing.StandardScaler()
 data = minMax.fit_transform(data)
 data = np.reshape(data, [height, width, bands])
+
+def Draw_Classification_Map(label, name: str, scale: float = 4.0, dpi: int = 400):
+        '''
+        get classification map , then save to given path
+        :param label: classification label, 2D
+        :param name: saving path and file's name
+        :param scale: scale of image. If equals to 1, then saving-size is just the label-size
+        :param dpi: default is OK
+        :return: null
+        '''
+        bg_idx = np.where(gt_reshape == 0, 0, 1)
+        bg_idx = bg_idx.reshape((height, width))
+        fig, ax = plt.subplots()
+        numlabel = np.array(label)
+        numlabel = numlabel * bg_idx
+        IP_color = np.array([
+            [0,0,0],
+            [0,0,255],
+            [255,0,0],
+            [0,255,0],
+            [255,255,0],
+            [135,206,250],
+            [255,0,255],
+            [6,128,67],
+            [147,75,67],
+            [241,215,126],
+            [148,148,231],
+            [255,165,0],
+            [30,144,255],
+            [127,255,170],
+            [138,43,226],
+            [255,105,180],
+            [220,220,220]
+        ])
+        v = spy.imshow(classes=numlabel.astype(np.int16), fignum=fig.number, colors=IP_color)
+        ax.set_axis_off()
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+        fig.set_size_inches(label.shape[1] * scale / dpi, label.shape[0] * scale / dpi)
+        foo_fig = plt.gcf()  # 'get current figure'
+        plt.gca().xaxis.set_major_locator(plt.NullLocator())
+        plt.gca().yaxis.set_major_locator(plt.NullLocator())
+        plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+        foo_fig.savefig(name + '.png', format='png',transparent=True, dpi=dpi, pad_inches=0)
+        pass
 
 for curr_seed in Seed_List:
 
@@ -185,11 +232,13 @@ for curr_seed in Seed_List:
                 AVG_ALL.append(test_AC_list)
 
                 # 保存数据信息
-                f = open('results\\' + dataset_name + '_results.txt', 'a+')
+                f = open('results/' + dataset_name + '_results.txt', 'a+')
                 str_results = '\n======================' \
                                 + " iteration=" + str(curr_seed) \
                                 + " learning rate=" + str(learning_rate) \
                                 + " epochs=" + str(max_epoch) \
+                                + "\nsamples_type={}".format(samples_type) \
+                                + "\ntrain_samples_per_class={}".format(train_samples_per_class) \
                                 + " train ratio=" + str(train_ratio) \
                                 + " val ratio=" + str(val_ratio) \
                                 + " ======================" \
@@ -242,7 +291,7 @@ for curr_seed in Seed_List:
                     "%.4f" % trainloss, "%.2f%%" % (trainOA * 100), "%.4f" % valloss, "%.2f%%" % (valOA * 100)))
             if valloss < best_loss:
                 best_loss = valloss
-                torch.save(net.state_dict(), "model\\best_model.pt")
+                torch.save(net.state_dict(), "model/best_model.pt")
                 # print('save model...')
             LOSS_LIST.append(valloss)
 
@@ -277,7 +326,7 @@ for curr_seed in Seed_List:
     day_str = day.strftime('%m_%d_%H_%M')
     torch.cuda.empty_cache()
     with torch.no_grad():
-        net.load_state_dict(torch.load("model\\best_model.pt"))
+        net.load_state_dict(torch.load("model/best_model.pt"))
         net.eval()
         tic2 = time.perf_counter()
         output = net(net_input)
@@ -292,6 +341,21 @@ for curr_seed in Seed_List:
         # 计算
         testing_time = toc2 - tic2 + LDA_SLIC_Time
         Test_Time_ALL.append(testing_time)
+        # 画图
+        classification_map = torch.argmax(
+            output, 1).reshape([height, width]).cpu() + 1
+        difference_map = np.zeros([height, width])
+        for i in range(difference_map.shape[0]):
+            for j in range(difference_map.shape[1]):
+                if gt[i][j] != 0:
+                    if classification_map[i][j] == gt[i][j]:
+                        difference_map[i][j] = 1
+                    else:
+                        difference_map[i][j] = 2
+        create_folder_date = datetime.datetime.now().strftime('%m_%d_%H_%M_%S')
+        os.makedirs('./results/' + dataset_name + '/' + create_folder_date + '/')
+        Draw_Classification_Map(
+            classification_map, './results/'+dataset_name+'/'+ create_folder_date + '/clas_'+ str(testOA))
 
     torch.cuda.empty_cache()
     del net
@@ -303,7 +367,7 @@ AVG_ALL = np.array(AVG_ALL)
 Train_Time_ALL = np.array(Train_Time_ALL)
 Test_Time_ALL = np.array(Test_Time_ALL)
 
-print("\ntrain_ratio={}".format(curr_train_ratio),
+print("\nsamples_type={}".format(samples_type),"  train_ratio={}".format(curr_train_ratio),"  train_samples_per_class={}".format(train_samples_per_class),
         "\n==============================================================================")
 print('OA=', np.mean(OA_ALL), '+-', np.std(OA_ALL))
 print('AA=', np.mean(AA_ALL), '+-', np.std(AA_ALL))
@@ -314,9 +378,12 @@ print("Average testing time:{}".format(np.mean(Test_Time_ALL)))
 day = datetime.datetime.now()
 day_str = day.strftime('%m_%d_%H_%M')
 
-f = open('results\\' + dataset_name + '_results.txt', 'a+')
+f = open('results/' + dataset_name + '_results.txt', 'a+')
 str_results = '\n\n************************************************'+day_str +'************************************************'\
+                + "\nsamples_type={}".format(samples_type) \
+                + "\ntrain_samples_per_class={}".format(train_samples_per_class) \
                 + "\ntrain_ratio={}".format(curr_train_ratio) \
+                + "\nval_ratio={}".format(val_ratio)\
                 + '\nOA=' + str(np.mean(OA_ALL)) + '+-' + str(np.std(OA_ALL)) \
                 + '\nAA=' + str(np.mean(AA_ALL)) + '+-' + str(np.std(AA_ALL)) \
                 + '\nKpp=' + str(np.mean(KPP_ALL)) + '+-' + str(np.std(KPP_ALL)) \
