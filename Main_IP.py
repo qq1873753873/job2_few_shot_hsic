@@ -39,7 +39,7 @@ Train_Time_ALL = []
 Test_Time_ALL = []
 
 superpixel_scale = Scale
-train_samples_per_class = 3
+train_samples_per_class = 5
 val_samples = class_count
 train_ratio = curr_train_ratio
 cmap = plt.get_cmap('jet', class_count + 1)

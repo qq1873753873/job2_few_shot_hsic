@@ -33,7 +33,7 @@ class GraphSelfAttentionLayer(nn.Module):
         self.heads = 4
         self.adj_bn = nn.BatchNorm2d(in_features)
 
-    def forward(self, h, adj):
+    def forward(self, h, adj):#只需要特征矩阵和邻接矩阵
         # h.shape torch.Size([196, 128])  # 每个超像素包含一个长度为128的序列信息
         Wh = torch.mm(h, self.W)  # h.shape: (N, in_features), Wh.shape: (N, out_features)
         Wh = self.to_linear(Wh)
@@ -263,13 +263,13 @@ class GS_GraphSAT(nn.Module):
         # 构造超像素与像素之间的映射
         clean_x_flatten = clean_x.reshape([h * w, -1])  # 145*145 128
         superpixels_flatten = torch.mm(self.norm_col_Q.t(), clean_x_flatten)  # (196, 128) =(196, 21025) * (21025, 128)
-        hx = clean_x
+        hx = clean_x#145,145,128
 
         # MAF
-        hx = self.Attention(torch.unsqueeze(hx.permute([2, 0, 1]), 0))
-        CNN_result11 = self.CNN_Branch11(hx)
-        CNN_result21 = self.CNN_Branch21(hx)
-        CNN_result = CNN_result11 + CNN_result21
+        hx = self.Attention(torch.unsqueeze(hx.permute([2, 0, 1]), 0))#([1, 128, 145, 145])
+        CNN_result11 = self.CNN_Branch11(hx)#([1, 128, 145, 145])
+        CNN_result21 = self.CNN_Branch21(hx)#([1, 128, 145, 145])
+        CNN_result = CNN_result11 + CNN_result21# ([1, 128, 145, 145])
         CNN_result = self.Attention(CNN_result)
 
         CNN_result11_pool = self.avg_pool(CNN_result11).view(1, 128)
@@ -288,15 +288,15 @@ class GS_GraphSAT(nn.Module):
         CNN_result = CNN_result12 + CNN_result22
         CNN_result = self.Attention(CNN_result)
 
-        CNN_result = CNN_result + CNN_result12 + CNN_result22
-        CNN_result = torch.squeeze(CNN_result, 0).permute([1, 2, 0]).reshape([h * w, -1])
+        CNN_result = CNN_result + CNN_result12 + CNN_result22 #都是 torch.Size([1, 64, 145, 145])
+        CNN_result = torch.squeeze(CNN_result, 0).permute([1, 2, 0]).reshape([h * w, -1])# torch.Size([21025, 64])
 
         # 图注意力
         H = superpixels_flatten
         H = self.GAT_Branch(H)  # 输出 196 64
         GAT_result = torch.matmul(self.Q, H)  # (21025, 196) * (196, 64) = (21025, 64)
         GAT_result = self.linear1(GAT_result)
-        GAT_result = self.act1(self.bn1(GAT_result))
+        GAT_result = self.act1(self.bn1(GAT_result))# 也是torch.Size([21025, 64])
 
         Y = 0.05 * CNN_result + 0.95 * GAT_result
         Y = self.Softmax_linear(Y)
