@@ -232,7 +232,7 @@ for curr_seed in Seed_List:
                 AVG_ALL.append(test_AC_list)
 
                 # 保存数据信息
-                f = open('results/' + dataset_name + '_results.txt', 'a+')
+                f = open('results\\' + dataset_name + '_results.txt', 'a+')
                 str_results = '\n======================' \
                                 + " iteration=" + str(curr_seed) \
                                 + " learning rate=" + str(learning_rate) \
@@ -326,7 +326,7 @@ for curr_seed in Seed_List:
     day_str = day.strftime('%m_%d_%H_%M')
     torch.cuda.empty_cache()
     with torch.no_grad():
-        net.load_state_dict(torch.load("model/best_model.pt"))
+        net.load_state_dict(torch.load("model\\best_model.pt"))
         net.eval()
         tic2 = time.perf_counter()
         output = net(net_input)
@@ -353,9 +353,9 @@ for curr_seed in Seed_List:
                     else:
                         difference_map[i][j] = 2
         create_folder_date = datetime.datetime.now().strftime('%m_%d_%H_%M_%S')
-        os.makedirs('./results/' + dataset_name + '/' + create_folder_date + '/')
+        os.makedirs('.\\results\\' + dataset_name + '\\' + create_folder_date + '\\')
         Draw_Classification_Map(
-            classification_map, './results/'+dataset_name+'/'+ create_folder_date + '/clas_'+ str(testOA))
+            classification_map, '.\\results\\'+dataset_name+'\\'+ create_folder_date + '\\clas_'+ str(testOA))
 
     torch.cuda.empty_cache()
     del net
@@ -378,7 +378,7 @@ print("Average testing time:{}".format(np.mean(Test_Time_ALL)))
 day = datetime.datetime.now()
 day_str = day.strftime('%m_%d_%H_%M')
 
-f = open('results/' + dataset_name + '_results.txt', 'a+')
+f = open('results\\' + dataset_name + '_results.txt', 'a+')
 str_results = '\n\n************************************************'+day_str +'************************************************'\
                 + "\nsamples_type={}".format(samples_type) \
                 + "\ntrain_samples_per_class={}".format(train_samples_per_class) \

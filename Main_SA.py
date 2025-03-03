@@ -25,7 +25,7 @@ class_count = max(gt_hsi)
 print('The class numbers of the HSI data is:', class_count)
 
 print('-----Importing Setting Parameters----')
-learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.0005, 500, 0.003, 0.007, 100  # up 0.5%
+learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.0005, 100, 0.003, 0.007, 100  # up 0.5%
 # learning_rate, max_epoch, curr_train_ratio, val_ratio, Scale = 0.0005, 500, 0.005, 0.005, 500  # up 0.5%
 
 dataset_name = Dataset
@@ -38,7 +38,7 @@ Train_Time_ALL = []
 Test_Time_ALL = []
 
 superpixel_scale = Scale
-train_samples_per_class = 1
+train_samples_per_class = 5
 val_samples = class_count
 train_ratio = curr_train_ratio
 cmap = plt.get_cmap('jet', class_count + 1)

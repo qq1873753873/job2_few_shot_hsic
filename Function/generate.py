@@ -36,7 +36,7 @@ def samples(samples_type, class_count, train_ratio, val_ratio, train_samples_per
 
         # 从测试集中随机选取部分样本作为验证集
         val_data_count = int(val_ratio * (len(test_data_index) + len(train_data_index)))  # 验证集数量
-        val_data_index = random.sample(test_data_index, val_data_count)
+        val_data_index = random.sample(sorted(test_data_index), val_data_count)
         val_data_index = set(val_data_index)
         test_data_index = test_data_index - val_data_index  # 由于验证集为从测试集分裂出，所以测试集应减去验证集
 
@@ -81,7 +81,7 @@ def samples(samples_type, class_count, train_ratio, val_ratio, train_samples_per
 
         # 从测试集中随机选取部分样本作为验证集
         val_data_count = int(val_samples)  # 验证集数量
-        val_data_index = random.sample(test_data_index, val_data_count)
+        val_data_index = random.sample(sorted(test_data_index), val_data_count)
         val_data_index = set(val_data_index)
 
         test_data_index = test_data_index - val_data_index
