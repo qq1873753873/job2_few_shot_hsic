@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
 
-# 论文：CM-UNet: Hybrid CNN-Mamba UNet for Remote Sensing Image Semantic Segmentation
-# 论文地址：https://arxiv.org/pdf/2405.10530
-
 
 class ChannelAttentionModule(nn.Module):
     def __init__(self, in_channels, reduction=4):

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange
 
+from models.BFAM import BFAM
 from models.MSAA import MSAA
 
 def drop_edge_dense(adj, drop_rate=0.2):
@@ -99,7 +100,6 @@ class GraphSelfAttentionLayer(nn.Module):
         return self.__class__.__name__ + ' (' + str(self.in_features) + ' -> ' + str(self.out_features) + ')'
 
 
-# source from https://github.com/PetarV-/GAT
 class GAT(nn.Module):
     def __init__(self, nfeat, nhid, adj, nout, dropout, alpha, nheads):
         """Dense version of GAT."""
@@ -268,35 +268,32 @@ class GS_GraphSAT(nn.Module):
                 self.CNN_denoise.add_module('CNN_denoise_Act' + str(i), nn.LeakyReLU())
 
         # 多尺度CNN
-        self.CNNlayerA1 = CNNConvBlock(128, CNN_nhid, 3, self.height, self.width)#128->64
-        self.CNNlayerA2 = CNNConvBlock(CNN_nhid, CNN_nhid, 3, self.height, self.width)
-        self.CNNlayerA3 = CNNConvBlock(CNN_nhid, CNN_nhid, 3, self.height, self.width)
+        # self.CNNlayerA1 = CNNConvBlock(128, CNN_nhid, 3, self.height, self.width)#128->64
+        # self.CNNlayerA2 = CNNConvBlock(CNN_nhid, CNN_nhid, 3, self.height, self.width)
+        # self.CNNlayerA3 = CNNConvBlock(CNN_nhid, CNN_nhid, 3, self.height, self.width)
+        # self.CNNlayerB1 = CNNConvBlock(128, CNN_nhid, 5, self.height, self.width)#input 200 64 5 145 145
+        # self.CNNlayerB2 = CNNConvBlock(CNN_nhid, CNN_nhid, 5, self.height, self.width)
+        # self.CNNlayerB3 = CNNConvBlock(CNN_nhid, CNN_nhid, 5, self.height, self.width)
+        # self.CNNlayerC1 = CNNConvBlock(128, CNN_nhid, 7, self.height, self.width)#input 200 64 3 145 145
+        # self.CNNlayerC2 = CNNConvBlock(CNN_nhid, CNN_nhid, 7, self.height, self.width)
+        # self.CNNlayerC3 = CNNConvBlock(CNN_nhid, CNN_nhid, 7, self.height, self.width)
+        # self.MSAA=MSAA(64, 64)
 
-        self.CNNlayerB1 = CNNConvBlock(128, CNN_nhid, 5, self.height, self.width)#input 200 64 5 145 145
-        self.CNNlayerB2 = CNNConvBlock(CNN_nhid, CNN_nhid, 5, self.height, self.width)
-        self.CNNlayerB3 = CNNConvBlock(CNN_nhid, CNN_nhid, 5, self.height, self.width)
-
-        self.CNNlayerC1 = CNNConvBlock(128, CNN_nhid, 7, self.height, self.width)#input 200 64 3 145 145
-        self.CNNlayerC2 = CNNConvBlock(CNN_nhid, CNN_nhid, 7, self.height, self.width)
-        self.CNNlayerC3 = CNNConvBlock(CNN_nhid, CNN_nhid, 7, self.height, self.width)
-
-        self.MSAA=MSAA(64, 64)
-        # self.CNN_Branch = nn.Sequential()
-        # for i in range(layers_count):
-        #     if i < layers_count - 1:
-        #         self.CNN_Branch.add_module('Attention' + str(i), CAM_Module(128))
-        #         self.CNN_Branch.add_module('CNN_Branch' + str(i), SSConv(128, 128, kernel_size=3))
-        #         self.CNN_Branch.add_module('Drop_Branch'+str(i), nn.Dropout(0.2))
-        #     else:
-        #         self.CNN_Branch.add_module('Attention' + str(i), CAM_Module(128))
-        #         self.CNN_Branch.add_module('CNN_Branch' + str(i), SSConv(128, 64, kernel_size=5))
-
-        # self.Attention = CAM_Module(128)
-
-        # self.CNN_Branch11 = SSConv(128, 128, kernel_size=1)
-        # self.CNN_Branch12 = SSConv(128, 64, kernel_size=3)
-        # self.CNN_Branch21 = SSConv1(128, 128, kernel_size=5)
-        # self.CNN_Branch22 = SSConv1(128, 64, kernel_size=7)
+        # 原CNN
+        self.CNN_Branch = nn.Sequential()
+        for i in range(layers_count):
+            if i < layers_count - 1:
+                self.CNN_Branch.add_module('Attention' + str(i), CAM_Module(128))
+                self.CNN_Branch.add_module('CNN_Branch' + str(i), SSConv(128, 128, kernel_size=3))
+                self.CNN_Branch.add_module('Drop_Branch'+str(i), nn.Dropout(0.2))
+            else:
+                self.CNN_Branch.add_module('Attention' + str(i), CAM_Module(128))
+                self.CNN_Branch.add_module('CNN_Branch' + str(i), SSConv(128, 64, kernel_size=5))
+        self.Attention = CAM_Module(128)
+        self.CNN_Branch11 = SSConv(128, 128, kernel_size=1)
+        self.CNN_Branch12 = SSConv(128, 64, kernel_size=3)
+        self.CNN_Branch21 = SSConv1(128, 128, kernel_size=5)
+        self.CNN_Branch22 = SSConv1(128, 64, kernel_size=7)
 
         self.GAT_Branch = nn.Sequential()
         self.GAT_Branch.add_module('GAT_Branch' + str(i),
@@ -306,7 +303,8 @@ class GS_GraphSAT(nn.Module):
         torch.nn.init.kaiming_normal_(self.linear1.weight, mode='fan_in', nonlinearity='leaky_relu')
         self.act1 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm1d(64)
-
+        #BFAM
+        self.bfam = BFAM(inp=128, out=64)
         self.Softmax_linear = nn.Sequential(nn.Linear(64, self.class_count))
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
@@ -328,61 +326,62 @@ class GS_GraphSAT(nn.Module):
         clean_x_flatten = clean_x.reshape([h * w, -1])  # 145*145 128
         superpixels_flatten = torch.mm(self.norm_col_Q.t(), clean_x_flatten)  # (196, 128) =(196, 21025) * (21025, 128)
         hx = clean_x
-        CNNin = torch.unsqueeze(hx.permute([2, 0, 1]), 0)  # 1 128 145 145
-        #多尺度CNN
-        CNNmid1_A = self.CNNlayerA1(CNNin) 
-        CNNmid1_B = self.CNNlayerB1(CNNin)
-        CNNmid1_C = self.CNNlayerC1(CNNin)
-        CNNin = CNNmid1_A + CNNmid1_B + CNNmid1_C
-        # CNNmid2_A = self.CNNlayerA2(CNNin)
-        # CNNmid2_B = self.CNNlayerB2(CNNin)
-        # CNNmid2_C = self.CNNlayerC2(CNNin)
-        # CNNin = CNNmid2_A + CNNmid2_B + CNNmid2_C
-        CNNout_A = self.CNNlayerA3(CNNin)
-        CNNout_B = self.CNNlayerB3(CNNin)
-        CNNout_C = self.CNNlayerC3(CNNin)
-        #三次卷积块出来之后的数据都是1*64*145*145形式的，输入MSAA模块
-        CNN_result=CNNout_A+CNNout_B+CNNout_C
-        #CNN_result=self.MSAA(CNNout_A,CNNout_B,CNNout_C)
 
+        # #多尺度CNN
+        # CNNin = torch.unsqueeze(hx.permute([2, 0, 1]), 0)  # 1 128 145 145
+        # CNNmid1_A = self.CNNlayerA1(CNNin) 
+        # CNNmid1_B = self.CNNlayerB1(CNNin)
+        # CNNmid1_C = self.CNNlayerC1(CNNin)
+        # CNNin = CNNmid1_A + CNNmid1_B + CNNmid1_C
+        # # CNNmid2_A = self.CNNlayerA2(CNNin)
+        # # CNNmid2_B = self.CNNlayerB2(CNNin)
+        # # CNNmid2_C = self.CNNlayerC2(CNNin)
+        # # CNNin = CNNmid2_A + CNNmid2_B + CNNmid2_C
+        # CNNout_A = self.CNNlayerA3(CNNin)
+        # CNNout_B = self.CNNlayerB3(CNNin)
+        # CNNout_C = self.CNNlayerC3(CNNin)
+        # #三次卷积块出来之后的数据都是1*64*145*145形式的，输入MSAA模块
+        # CNN_result=CNNout_A+CNNout_B+CNNout_C
+        # #CNN_result=self.MSAA(CNNout_A,CNNout_B,CNNout_C)
+        
 
-        # MAF
-        # hx = self.Attention(torch.unsqueeze(hx.permute([2, 0, 1]), 0))
-        # 原始注意力
-        # CNN_result11 = self.CNN_Branch11(hx)
-        # CNN_result21 = self.CNN_Branch21(hx)
-        # CNN_result = CNN_result11 + CNN_result21
-        # CNN_result = self.Attention(CNN_result)
-
-        # CNN_result11_pool = self.avg_pool(CNN_result11).view(1, 128)
-        # CNN_result11_excite = CNN_result11 * self.fc(CNN_result11_pool).view(1, 128, 1, 1)
-        # CNN_result11 = CNN_result11 * CNN_result11_excite
-
-        # CNN_result21_pool = self.avg_pool(CNN_result21).view(1, 128)
-        # CNN_result21_excite = CNN_result21 * self.fc(CNN_result21_pool).view(1, 128, 1, 1)
-        # CNN_result21 = CNN_result21 * CNN_result21_excite
-
-        # CNN_result1 = CNN_result + CNN_result11
-        # CNN_result2 = CNN_result + CNN_result21
-
-        # CNN_result12 = self.CNN_Branch12(CNN_result1)
-        # CNN_result22 = self.CNN_Branch22(CNN_result2)
-        # CNN_result = CNN_result12 + CNN_result22
-        # CNN_result = self.Attention(CNN_result)
-
-        # CNN_result = CNN_result + CNN_result12 + CNN_result22
-
-        CNN_result = torch.squeeze(CNN_result, 0).permute([1, 2, 0]).reshape([h * w, -1])
+        # 原注意力
+        hx = self.Attention(torch.unsqueeze(hx.permute([2, 0, 1]), 0)) # MAF
+        CNN_result11 = self.CNN_Branch11(hx)
+        CNN_result21 = self.CNN_Branch21(hx)
+        CNN_result = CNN_result11 + CNN_result21
+        CNN_result = self.Attention(CNN_result)
+        CNN_result11_pool = self.avg_pool(CNN_result11).view(1, 128)
+        CNN_result11_excite = CNN_result11 * self.fc(CNN_result11_pool).view(1, 128, 1, 1)
+        CNN_result11 = CNN_result11 * CNN_result11_excite
+        CNN_result21_pool = self.avg_pool(CNN_result21).view(1, 128)
+        CNN_result21_excite = CNN_result21 * self.fc(CNN_result21_pool).view(1, 128, 1, 1)
+        CNN_result21 = CNN_result21 * CNN_result21_excite
+        CNN_result1 = CNN_result + CNN_result11
+        CNN_result2 = CNN_result + CNN_result21
+        CNN_result12 = self.CNN_Branch12(CNN_result1)
+        CNN_result22 = self.CNN_Branch22(CNN_result2)
+        CNN_result = CNN_result12 + CNN_result22
+        CNN_result = self.Attention(CNN_result)
+        CNN_result = CNN_result + CNN_result12 + CNN_result22#torch.Size([1, 64, 145, 145])
+        CNN_HWC=torch.squeeze(CNN_result, 0).permute([1, 2, 0])
+        CNN_BCHW=CNN_result
+        CNN_result = CNN_HWC.reshape([h * w, -1])
 
         # 图注意力
         H = superpixels_flatten
         H = self.GAT_Branch(H)  # 输出 196 64
         GAT_result = torch.matmul(self.Q, H)  # (21025, 196) * (196, 64) = (21025, 64)
+        GAT_HWC=GAT_result.reshape([h, w, -1])
+        GAT_BCHW=GAT_HWC.permute([2, 0, 1]).unsqueeze(0)
         GAT_result = self.linear1(GAT_result)
         GAT_result = self.act1(self.bn1(GAT_result))
-
-        Y = 0.05 * CNN_result + 0.95 * GAT_result
-
-        Y = self.Softmax_linear(Y)
-        Y = F.softmax(Y, -1)
+        #使用BFAM模块来融合
+        # Y=self.bfam(CNN_BCHW, GAT_BCHW) #1,64,145,145
+        # Y=Y.reshape([h * w, -1])
+        #自适应融合
+        Y = 0.05 * CNN_result + 0.95 * GAT_result#torch.Size([21025, 64])
+        #融合CNN_result和GAT_result
+        Y = self.Softmax_linear(Y)#torch.Size([21025, 16])
+        Y = F.softmax(Y, -1)#对Y的最后一个维度应用了softmax函数。变成21025, 1
         return Y
