@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange
 
-from models.BFAM import BFAM
+from models.WaveletTransformFeatureFusionModule import WTFFM
 from models.MSAA import MSAA
 
 def drop_edge_dense(adj, drop_rate=0.2):
@@ -304,7 +304,7 @@ class GS_GraphSAT(nn.Module):
         self.act1 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm1d(64)
         #BFAM
-        self.bfam = BFAM(inp=128, out=64)
+        self.bfam = WTFFM(inp=128, out=64)
         self.Softmax_linear = nn.Sequential(nn.Linear(64, self.class_count))
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
@@ -345,7 +345,7 @@ class GS_GraphSAT(nn.Module):
         # #CNN_result=self.MSAA(CNNout_A,CNNout_B,CNNout_C)
         
 
-        # 原注意力
+        # 注意力
         hx = self.Attention(torch.unsqueeze(hx.permute([2, 0, 1]), 0)) # MAF
         CNN_result11 = self.CNN_Branch11(hx)
         CNN_result21 = self.CNN_Branch21(hx)
@@ -368,7 +368,7 @@ class GS_GraphSAT(nn.Module):
         CNN_BCHW=CNN_result
         CNN_result = CNN_HWC.reshape([h * w, -1])
 
-        # 图注意力
+        # 自适应图注意力
         H = superpixels_flatten
         H = self.GAT_Branch(H)  # 输出 196 64
         GAT_result = torch.matmul(self.Q, H)  # (21025, 196) * (196, 64) = (21025, 64)

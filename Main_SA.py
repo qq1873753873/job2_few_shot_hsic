@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import spectral as spy
 from sklearn import metrics
 from sklearn import preprocessing
-from Function import load_data, generate, LDA_SLIC, GreedyTrainingStrategy
+from Function import ProgressiveSampleOptimizationStrategy, load_data, generate, LDA_SLIC
 from Network import GS_GraphSAT
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -252,7 +252,7 @@ for curr_seed in Seed_List:
                 return OA
 
 
-    # 贪心训练策略参数
+    # 渐进式小样本策略参数
     LOSS_LIST = []
     # early_stop_nums = 9
     # early_stop_nums = 7
@@ -278,7 +278,7 @@ for curr_seed in Seed_List:
             net.eval()
             output = net(net_input)
 
-            al = GreedyTrainingStrategy.GTS(output, train_data_index, val_data_index, test_data_index)
+            al = ProgressiveSampleOptimizationStrategy.PSOS(output, train_data_index, val_data_index, test_data_index)
 
             trainloss = compute_loss(output, train_samples_gt_onehot, train_label_mask)
             trainOA = evaluate_performance(output, train_samples_gt, train_samples_gt_onehot)

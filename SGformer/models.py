@@ -78,7 +78,7 @@
 #         return x
 
 # class MLP(nn.Module):
-#     """ adapted from https://github.com/CUAI/CorrectAndSmooth/blob/master/gen_models.py """
+#     
 #     def __init__(self, in_channels, hidden_channels, out_channels, num_layers,
 #                  dropout=.5):
 #         super(MLP, self).__init__()

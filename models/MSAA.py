@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-
+# 空谱特征增强模块
+# 光谱
 class ChannelAttentionModule(nn.Module):
     def __init__(self, in_channels, reduction=4):
         super(ChannelAttentionModule, self).__init__()
@@ -19,7 +20,7 @@ class ChannelAttentionModule(nn.Module):
         max_out = self.fc(self.max_pool(x))
         out = avg_out + max_out
         return self.sigmoid(out)
-
+# 空间
 class SpatialAttentionModule(nn.Module):
     def __init__(self, kernel_size=7):
         super(SpatialAttentionModule, self).__init__()
@@ -32,7 +33,7 @@ class SpatialAttentionModule(nn.Module):
         x = torch.cat([avg_out, max_out], dim=1)
         x = self.conv1(x)
         return self.sigmoid(x)
-
+# 多尺度融合卷积
 class FusionConv(nn.Module):
     def __init__(self, in_channels, out_channels, factor=4.0):
         super(FusionConv, self).__init__()
